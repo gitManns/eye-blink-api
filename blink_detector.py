@@ -2,6 +2,7 @@ import cv2
 import mediapipe as mp
 import requests
 import tempfile
+import numpy as np
 import os
 
 # Download video from URL and save temporarily
@@ -15,40 +16,58 @@ def download_video_from_url(video_url):
             if chunk:
                 tmp_file.write(chunk)
         return tmp_file.name  # return path to downloaded video
+    
+def eye_aspect_ratio(upper_point, lower_point):
+    return np.linalg.norm(upper_point - lower_point)
+
 
 # Blink detection logic
 def detect_blinks(video_path):
     mp_face_mesh = mp.solutions.face_mesh
     face_mesh = mp_face_mesh.FaceMesh(static_image_mode=False)
     blink_count = 0
+    blinked = False
 
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
-        raise Exception("Error opening video file")
+        raise Exception("Could not open video.")
 
-    while cap.isOpened():
-        ret, frame = cap.read()
-        if not ret:
+    while True:
+        success, frame = cap.read()
+        if not success:
             break
 
-        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        results = face_mesh.process(rgb_frame)
+        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        results = face_mesh.process(rgb)
 
         if results.multi_face_landmarks:
-            # Simple placeholder logic — replace with proper EAR or blink condition
-            blink_count += 1
+            for face_landmarks in results.multi_face_landmarks:
+                # Get landmark coordinates
+                landmarks = face_landmarks.landmark
+
+                # Get left eye points (e.g. 159 and 145)
+                top_lid = np.array([landmarks[159].x, landmarks[159].y])
+                bottom_lid = np.array([landmarks[145].x, landmarks[145].y])
+                ear = eye_aspect_ratio(top_lid, bottom_lid)
+                print(f"EAR: {ear:.5f}")
+                # Threshold for blink (tweak based on testing)
+                if ear < 0.02 and not blinked:
+                    blink_count += 1
+                    blinked = True
+                elif ear > 0.024:
+                    blinked = False
 
     cap.release()
     return blink_count
 
 # Classify health based on blink count
 def classify_blink_health(blink_count):
-    if blink_count < 5:
+    if blink_count < 3:
         return {
             "blink_status": "Low",
             "recommendation": "Try the 20-20-20 rule. Blink more often to reduce eye strain."
         }
-    elif blink_count < 15:
+    elif blink_count < 5:
         return {
             "blink_status": "Moderate",
             "recommendation": "Consider taking breaks regularly to keep eyes healthy."
