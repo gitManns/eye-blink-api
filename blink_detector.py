@@ -1,47 +1,60 @@
 import cv2
 import mediapipe as mp
+import requests
+import tempfile
+import os
 
-def count_blinks_and_duration(video_path):
+# Download video from URL and save temporarily
+def download_video_from_url(video_url):
+    response = requests.get(video_url, stream=True)
+    if response.status_code != 200:
+        raise Exception("Failed to download video")
+    
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp_file:
+        for chunk in response.iter_content(chunk_size=1024):
+            if chunk:
+                tmp_file.write(chunk)
+        return tmp_file.name  # return path to downloaded video
+
+# Blink detection logic
+def detect_blinks(video_path):
     mp_face_mesh = mp.solutions.face_mesh
-    face_mesh = mp_face_mesh.FaceMesh(
-        static_image_mode=False,
-        max_num_faces=1,
-        refine_landmarks=True,
-        min_detection_confidence=0.5,
-        min_tracking_confidence=0.5
-    )
+    face_mesh = mp_face_mesh.FaceMesh(static_image_mode=False)
+    blink_count = 0
 
     cap = cv2.VideoCapture(video_path)
-
-    fps = cap.get(cv2.CAP_PROP_FPS)
-    frame_count = 0
-    blink_count = 0
-    eye_closed = False
-    threshold = 0.015
+    if not cap.isOpened():
+        raise Exception("Error opening video file")
 
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
             break
 
-        frame_count += 1
-        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        results = face_mesh.process(rgb)
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        results = face_mesh.process(rgb_frame)
 
         if results.multi_face_landmarks:
-            landmarks = results.multi_face_landmarks[0].landmark
-
-            left_ear = abs(landmarks[159].y - landmarks[145].y)
-            right_ear = abs(landmarks[386].y - landmarks[374].y)
-            avg_ear = (left_ear + right_ear) / 2
-
-            if avg_ear < threshold:
-                if not eye_closed:
-                    blink_count += 1
-                    eye_closed = True
-            else:
-                eye_closed = False
+            # Simple placeholder logic — replace with proper EAR or blink condition
+            blink_count += 1
 
     cap.release()
-    duration_seconds = frame_count / fps if fps > 0 else 0
-    return blink_count, duration_seconds
+    return blink_count
+
+# Classify health based on blink count
+def classify_blink_health(blink_count):
+    if blink_count < 5:
+        return {
+            "blink_status": "Low",
+            "recommendation": "Try the 20-20-20 rule. Blink more often to reduce eye strain."
+        }
+    elif blink_count < 15:
+        return {
+            "blink_status": "Moderate",
+            "recommendation": "Consider taking breaks regularly to keep eyes healthy."
+        }
+    else:
+        return {
+            "blink_status": "Healthy",
+            "recommendation": "Keep up the good screen habits!"
+        }
