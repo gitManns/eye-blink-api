@@ -65,7 +65,7 @@ def classify_blink_health(blink_count):
     if blink_count < 3:
         return {
             "blink_status": "Low",
-            "recommendation": "Try the 20-20-20 rule. Blink more often to reduce eye strain."
+            "recommendation": "Try the 20-20-20 rule. Blink more often to reduce eye strain. You may have Myopia, please consult an Eye Specialist"
         }
     elif blink_count < 5:
         return {
