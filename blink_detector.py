@@ -49,7 +49,7 @@ def detect_blinks(video_path):
                 top_lid = np.array([landmarks[159].x, landmarks[159].y])
                 bottom_lid = np.array([landmarks[145].x, landmarks[145].y])
                 ear = eye_aspect_ratio(top_lid, bottom_lid)
-                print(f"EAR: {ear:.5f}")
+                #print(f"EAR: {ear:.5f}")
                 # Threshold for blink (tweak based on testing)
                 if ear < 0.014 and not blinked:
                     blink_count += 1
