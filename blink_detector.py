@@ -51,10 +51,10 @@ def detect_blinks(video_path):
                 ear = eye_aspect_ratio(top_lid, bottom_lid)
                 print(f"EAR: {ear:.5f}")
                 # Threshold for blink (tweak based on testing)
-                if ear < 0.02 and not blinked:
+                if ear < 0.014 and not blinked:
                     blink_count += 1
                     blinked = True
-                elif ear > 0.024:
+                elif ear > 0.019:
                     blinked = False
 
     cap.release()
